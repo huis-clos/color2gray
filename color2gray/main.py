@@ -1,14 +1,10 @@
-import decimal
-
-__author__ = 'ctizzle'
+__author__ = 'Colleen Toth'
 
 from skimage import io, color
 import cv2
 import numpy as np
-from decimal import Decimal
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-import math
 
 
 def luv2lch(luv):
@@ -100,7 +96,7 @@ if np.sign(deltalhk_y) == 0:
         signg_y = np.sign(deltal_y)
 else:
     signg_y = np.sign(deltalhk_y)
-    
+
 
 
 
