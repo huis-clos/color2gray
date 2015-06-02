@@ -1,13 +1,13 @@
 __author__ = 'Colleen Toth'
 
-from skimage import io, color
+import skimage.color as color
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import math
 import matplotlib.cm as cm
-import pylab as pl
+
 
 
 
@@ -21,8 +21,7 @@ def color_difference(lab_i, lab_j, luv_i, luv_j, alpha1):
     delta_a2 = ((lab_i[1] - lab_j[1])** 2).copy()
     delta_b2 = ((lab_i[2] - lab_j[2])** 2).copy()
     r = 3.59210244843    # 2.54 * 1.41421356237;
-    g =  np.power(np.add(delta_l2, np.power(np.divide(np.multiply(alpha1, np.power(np.add(delta_a2, delta_b2), 0.5)), r), 2)), .5)
-    #g = (deltal2 + (alpha .* ((deltaa2 + deltab2) .^ 0.5) ./ r) .^ 2) .^ 0.5;
+    g = np.power(np.add(delta_l2, np.power(np.divide(np.multiply(alpha1, np.power(np.add(delta_a2, delta_b2), 0.5)), r), 2)), .5)
 
     lhk_i = luv2lhk(luv_i[0], luv_i[1], luv_i[2])
     lhk_j = luv2lhk(luv_j[0], luv_j[1], luv_j[2])
@@ -56,41 +55,45 @@ def luv2lhk(l,u,v):
 
 def luv2lch(luv):
     import numpy as np
-    import math
 
     lch = luv.copy()
 
     x, y, z = lch.shape
 
-    for i in range (x):
-        for j in range(y):
-            u = luv[i][j][1]
-            v = luv[i][j][2]
-            lch[i][j][1] = np.sqrt(np.power(u,2) + np.power(v,2))
-            lch[i][j][2] = np.arctan2(v,u)
-
+    for n in range(x):
+        for m in range(y):
+            u = luv[n][m][1]
+            v = luv[n][m][2]
+            lch[n][m][1] = np.sqrt(np.power(u, 2) + np.power(v, 2))
+            lch[n][m][2] = np.arctan2(v, u)
 
     return lch
 
-img = mpimg.imread('testColor.gif')
-img = cv2.normalize(img.astype('float32'), None, 0.0, 1.0, cv2.NORM_MINMAX)
+img = cv2.imread('pimg.jpg')
+
+if img.dtype != 'float32':
+    img = cv2.normalize(img.astype('float32'), None, 0.0, 1.0, cv2.NORM_MINMAX)
 
 
 img1 = img.copy()
 
 x, y, z = img.shape
 
-img1 = np.zeros((x,y,z))
+img1 = np.zeros((x, y, z))
 img1 = img.copy()
 
 
-lamda = x * y
+lmd = x * y
 alpha = None
 
-lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
-luv = cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
+#lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+#luv = cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
 
-lch = luv2lch(luv)
+lab = color.rgb2lab(img)
+luv = color.rgb2luv(img)
+LCH = color.lab2lch(img)
+
+#LCH = luv2lch(luv)
 
 Gx = np.zeros((x, y))
 Gy = np.zeros((x, y))
@@ -99,9 +102,9 @@ for i in range(1, x-1):
         Gx[i, j] = color_difference(lab[i + 1, j, :], lab[i - 1, j, :], luv[i + 1, j, :], luv[i - 1, j, :], alpha)
         Gy[i, j] = color_difference(lab[i, j + 1, :], lab[i, j - 1, :], luv[i, j + 1, :], luv[i, j - 1, :], alpha)
 
-L = lch[:, :, 0]
-C = lch[:, :, 1]
-H = lch[:, :, 2]
+L = LCH[:, :, 0]
+C = LCH[:, :, 1]
+H = LCH[:, :, 2]
 T = np.zeros((x, y, 9))
 
 for i in range(x):
@@ -111,7 +114,7 @@ for i in range(x):
                                 1])
 
 
-U,V,Z = np.gradient(T)
+U, V, Z = np.gradient(T)
 Lx, Ly = np.gradient(L)
 
 M_s = np.zeros((9, 9))
@@ -139,16 +142,16 @@ tones = np.zeros((x, y))
 for i in range(x):
     for j in range(y):
         f = T[i, j, :].reshape(1, 9, order='F')
-        f = f * (newTheta)
+        f = f * (1-newTheta)
         tones[i, j] = L[i, j] + np.multiply(f, C[i, j])[0][0]
-        
+
 
 
 print '\n\n'
 
 plt.imshow(img1)
 plt.show()
-plt.imshow(tones ,cmap=cm.Greys_r)
+plt.imshow(tones, cmap=cm.Greys_r)
 plt.show()
 
 
