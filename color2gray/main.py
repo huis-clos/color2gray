@@ -18,7 +18,7 @@ def color_difference(lab_i, lab_j, luv_i, luv_j, alpha1):
 
     # sets alpha if not provided
     if alpha1 is None:
-        alpha1 = 0.1
+        alpha1 = 1.0
     # Difference between L in LAB for two given pixels
     delta_l = lab_i[0] - lab_j[0].copy()
     # Difference between L in LAB for two given pixels squared
@@ -37,7 +37,7 @@ def color_difference(lab_i, lab_j, luv_i, luv_j, alpha1):
     # difference between LHK i and j
     delta_lhk = lhk_i - lhk_j
     # compute sign for relative ordering of pixels. If sign(LHK) is 0, then use sign(delta_l),
-    # if delta_l is 0, then use the sign(delta-l + delta_a + delta_b)
+    # if delta_l is 0, then use the sign(delta-l + delta_a + delta_b) as described in the Kim, et al. paper
     if delta_lhk == 0:
         if delta_l == 0:
             sign_g = np.sign(np.power(delta_l2, 1.5) + np.power(delta_a2, 1.5) + np.power(delta_b2, 1.5))
@@ -75,7 +75,9 @@ def luv2lhk(l, u, v):
 
 
 # read in image
-img = cv2.imread('testColor.jpg')
+img2 = cv2.imread('testColor.jpg', flags=cv2.IMREAD_COLOR)
+
+img = cv2.cvtColor(img2, cv2.COLOR_RGB2BGR)
 
 # normalize image if not already in correct format
 if img.dtype != 'float32':
@@ -95,7 +97,7 @@ lab = color.rgb2lab(img)  # - RGB to LAB
 luv = color.rgb2luv(img)  # - RGB to LUV
 LCH = color.lab2lch(img)  # - LAB to LCH
 
-#Compute G(x, y) for image
+# Compute G(x, y) for image
 Gx = np.zeros((x, y))   # Create empty array for Gx component
 Gy = np.zeros((x, y))   # Create empty array for Gy component
 for i in range(1, x-1):
@@ -104,7 +106,7 @@ for i in range(1, x-1):
         Gx[i, j] = color_difference(lab[i + 1, j, :], lab[i - 1, j, :], luv[i + 1, j, :], luv[i - 1, j, :], alpha)
         Gy[i, j] = color_difference(lab[i, j + 1, :], lab[i, j - 1, :], luv[i, j + 1, :], luv[i, j - 1, :], alpha)
 
-#Assign Lightness, chroma, and hue arrays from LCH to their own respective arrays
+# Assign Lightness, chroma, and hue arrays from LCH to their own respective arrays
 L = LCH[:, :, 0]
 C = LCH[:, :, 1]
 H = LCH[:, :, 2]
@@ -116,15 +118,15 @@ for i in range(x):
                                 math.sin(H[i, j]), math.sin(2 * H[i, j]), math.sin(3 * H[i, j]), math.sin(4 * H[i, j]),
                                 1])
 
-#Calculate color gradient from T and L
+# Calculate color gradient from T and L
 U, V, Z = np.gradient(T)
 Lx, Ly = np.gradient(L)
 
-#Initialize matrices for M_s and b_s
+# Initialize matrices for M_s and b_s
 M_s = np.zeros((9, 9))  # 9x9 matrix
 b_s = np.zeros((9, 1))  # 9x1 vector
 
-#Solve for energy function E_s
+# Solve for energy function E_s
 for i in range(1,x-1):
     for j in range(1, y-1):
         p = Gx[i, j] - Lx[i, j]
@@ -142,15 +144,15 @@ X = np.linalg.lstsq(X, b_s)[0]
 newX = np.zeros((9, 1))
 newX = np.reshape(X, (9, 1))
 
-#initializes matrix for final image
+# initializes matrix for final image
 final_image = np.zeros((x, y))
 
 
-#Solve for g(x, y) = L + f(theta)C Eq(1), the energy function E_s (continued)
+# Solve for g(x, y) = L + f(theta)C Eq(1), the energy function E_s (continued)
 for i in range(x):
     for j in range(y):
         f = T[i, j, :].reshape(1, 9, order='F')
-        f = f * (1-newX)
+        f = f * (newX)
         final_image[i, j] = L[i, j] + np.multiply(f, C[i, j])[0][0]
 
 
@@ -159,7 +161,10 @@ plt.imshow(img1)
 plt.show()
 plt.imshow(final_image, cmap=cm.Greys_r)
 plt.show()
-#scipy.misc.imsave('gray5.jpg', final_image)
+bw_img = cv2.cvtColor(img1, cv2.COLOR_RGB2GRAY)
+#cv2.imshow('gray', bw_img)
+#cv2.waitKey(0)
+#scipy.misc.imsave('gray_7.png', bw_img)
 
 
 
